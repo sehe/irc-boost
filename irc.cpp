@@ -3,8 +3,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-Irc::Irc(std::string server, unsigned short port, bool verbose, bool autoconnect) :
-	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios), _buffer(1024)
+Irc::Irc(const std::string &server, unsigned short port, bool verbose, bool autoconnect) :
+	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios), _buffer(1024, 0)
 {
 	if(autoconnect)
 		connect();
@@ -28,12 +28,6 @@ bool Irc::connect()
 		if(_verbose) printf("Searching for a valid endpoint \n");
 		while(it != end)
 		{
-			if(!error) 
-			{
-				if(_verbose) printf("\t\tSuccess\n");
-				break;
-			}
-
 			boost::asio::ip::tcp::endpoint endpoint = *it++;
 			if(_verbose) printf("\tTrying to connect to %s\n", endpoint.address().to_string().c_str());				
 
@@ -45,6 +39,13 @@ bool Irc::connect()
 				if(_verbose) printf("\t\tError\n");
 				continue;
 			}
+			else
+			{
+				if(_verbose) printf("\t\tSuccess\n");
+				receive();
+				break;
+			}
+
 		}
 		if(_verbose) printf("Connection to %s successful\n", _server.c_str());
 		return true;
@@ -122,26 +123,29 @@ void Irc::privmsg(const std::string &username, const std::string &msg, bool skip
 	receive();
 }
 
-std::vector<std::string> Irc::receive()
+std::string Irc::receive()
 {
 	_read();
+	_data.clear();
 	_data = std::string(_buffer.begin(), _buffer.end());
 	if(_verbose) printf("%s\n", _data.c_str());
 	_parse();
-	return _tokens;
+	return _data;
 }
 
 /////////////
 
 void Irc::_send(const std::string &msg)
 {
-	_len = _socket.send(boost::asio::buffer(msg));
+	_socket.send(boost::asio::buffer(msg));
 }
 
 void Irc::_read()
 {
-	_len = _socket.read_some(boost::asio::buffer(_buffer));
-	_buffer[_len - 1] = '\0';
+	std::vector<char> _buf(1024);
+	std::size_t len = _socket.read_some(boost::asio::buffer(_buf));
+	_buf[len - 1] = '\0';
+	_buffer = _buf.data();
 }
 
 void Irc::_parse()
@@ -160,5 +164,5 @@ void Irc::_parse()
 	printf("%s \n", _tokens[1].c_str());
 	printf("\n");
 	printf("\n");
-	*/
+	V*/
 }
