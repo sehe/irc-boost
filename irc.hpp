@@ -4,6 +4,8 @@
 #include <vector>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/tokenizer.hpp>
 
 class Irc
 {
@@ -14,31 +16,32 @@ class Irc
 		bool connect();
 		bool disconnect();
 
-		void nick(const std::string &nickname, bool skipmsg = true);
-		void user(const std::string &username, bool skipmsg = true);
-		void user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname, bool skipmsg = true);
-		void join(const std::string &chan, bool skipmsg = true);
-		void part(const std::string &chan, bool skipmsg = true);
-		void command(const std::string &cmd, const std::string &msg, bool skipmsg = true);
-		void privmsg(const std::string &username, const std::string &msg, bool skipmsg = true);
+		void nick(const std::string &nickname);
+		void user(const std::string &username);
+		void user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname);
+		void join(const std::string &chan);
+		void part(const std::string &chan);
+		void privmsg(const std::string &to, const std::string &msg);
+		void command(const std::string &cmd, const std::string &msg);
+		void command(const std::string &cmd, const std::string &to, const std::string &msg);
 
-		std::string receive();
+		void run();
 
 	private:
 		void _send(const std::string &msg);
-		void _read();
-		void _parse();
-	
+		void _read(const boost::system::error_code &error);
+		void _readHandler(const std::vector<std::string> &tokens);
+		void _sendHandler(const boost::system::error_code &error);
+
 		std::string _server;
 		unsigned short _port;
 		bool _verbose;
 		std::string	_chan;
 		std::string	_nick;
+		std::array<char, 1024> _buffer;
 		boost::asio::io_service _ios;
 		boost::asio::ip::tcp::socket _socket;
-		std::string	_buffer;
-		std::string	_data;
-		std::vector<std::string> _tokens;
+		std::vector<std::function<void (const std::vector<std::string>&)>> _readHandlers;
 };
 
 #endif

@@ -1,11 +1,22 @@
 #include "irc.hpp"
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/bind.hpp>
 
 Irc::Irc(const std::string &server, unsigned short port, bool verbose, bool autoconnect) :
-	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios), _buffer(1024, 0)
+	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios)
 {
+	_readHandlers.push_back([this](const std::vector<std::string> &t) {
+		std::cout << "ping handler " << t[0] << std::endl;
+		if(t[0].compare("PING") == 0)
+		{
+			std::cout << "Ping received, skipping it" << std::endl;
+		}	
+	});
+
 	if(autoconnect)
 		connect();
 }
@@ -42,12 +53,12 @@ bool Irc::connect()
 			else
 			{
 				if(_verbose) printf("\t\tSuccess\n");
-				receive();
 				break;
 			}
 
 		}
 		if(_verbose) printf("Connection to %s successful\n", _server.c_str());
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 		return true;
 	}
 	catch(std::exception const &e) {
@@ -69,100 +80,106 @@ bool Irc::disconnect()
 	return true;
 }
 
-void Irc::nick(const std::string &nickname, bool skipmsg)
+void Irc::nick(const std::string &nickname)
 {
-	_send("NICK " + nickname + "\r\n");
-	receive();
+	command("NICK", nickname);
 }
 
-void Irc::user(const std::string &username, bool skipmsg)
+void Irc::user(const std::string &username)
 {
-	user(username, username, username, username, skipmsg);
+	user(username, username, username, username);
 }
 
-void Irc::user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname, bool skipmsg)
+void Irc::user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname)
 {
-	_send("USER " + username + " " + hostname + " " + server + " : " + realname + "\r\n");
-	receive();
+	command("USER", username + " " + hostname + " " + server + " : " + realname);
 }
 
-void Irc::join(const std::string &chan, bool skipmsg)
+void Irc::join(const std::string &chan)
 {
-	if(_chan == "")
-		_chan = chan;
+	(chan.front() == '#' ? _chan = chan : _chan = '#' + chan);
+
+	command("PART", _chan);
+	command("JOIN", _chan);
+}
+
+void Irc::part(const std::string &chan)
+{
+	command("PART", chan);
+}
+
+void Irc::privmsg(const std::string &to, const std::string &msg)
+{
+	command("PRIVMSG", to, msg);
+}
+
+void Irc::command(const std::string &cmd, const std::string &msg)
+{
+	std::string message = cmd + " " + msg + "\r\n";
+}
+
+void Irc::command(const std::string &cmd, const std::string &to, const std::string &msg)
+{
+	std::string message = cmd + " " + to + " " + msg + "\r\n";
+	_send(message);
+}
+
+void Irc::run()
+{
+	_socket.async_read_some(boost::asio::buffer(_buffer), 
+		boost::bind(&Irc::_read, this, boost::asio::placeholders::error)
+	);
 	
-	if(_chan != chan)
-		return;
-
-	_send("PART " + _chan + "\r\n");
-	_send("JOIN " + _chan + "\r\n");
-	receive();
+	_ios.run();
 }
 
-void Irc::part(const std::string &chan, bool skipmsg)
-{
-	if(_chan == "")
-		_chan = chan;
-
-	if(_chan != chan)
-		return;
-	
-	_send("PART " + _chan + "\r\n");
-	receive();
-}
-
-void Irc::command(const std::string &cmd, const std::string &msg, bool skipmsg)
-{
-	_send(cmd + " " + msg + "\r\n");
-	receive();
-}
-
-void Irc::privmsg(const std::string &username, const std::string &msg, bool skipmsg)
-{
-	_send("PRIVMSG " + username + " " + msg + "\r\n");
-	receive();
-}
-
-std::string Irc::receive()
-{
-	_read();
-	_data.clear();
-	_data = std::string(_buffer.begin(), _buffer.end());
-	if(_verbose) printf("%s\n", _data.c_str());
-	_parse();
-	return _data;
-}
-
-/////////////
+/*
+ *	Private
+ */
 
 void Irc::_send(const std::string &msg)
 {
-	_socket.send(boost::asio::buffer(msg));
+	boost::asio::async_write(_socket, boost::asio::buffer(msg),
+		boost::bind(&Irc::_sendHandler, this,
+		boost::asio::placeholders::error)
+	);
 }
 
-void Irc::_read()
+void Irc::_read(const boost::system::error_code &error)
 {
-	std::vector<char> _buf(1024);
-	std::size_t len = _socket.read_some(boost::asio::buffer(_buf));
-	_buf[len - 1] = '\0';
-	_buffer = _buf.data();
-}
-
-void Irc::_parse()
-{
-	// Tokenize the string
-	boost::split(_tokens, _data, boost::is_any_of(" "));
-	if(_tokens[0] == "PING")
+	if(error)
 	{
-		std::string pong = "PONG " + _tokens[1];
-		_send(pong);
-		return;
-	}		
+		std::cerr << error.message() << std::endl;
+	}
+	else
+	{
+		boost::char_separator<char> sep("!.@:; ");
+		
+		std::cout << "_read func\n";	
+		std::cout << _buffer.data() << std::endl;
 
-	/*
-	printf("%s \n", _tokens[0].c_str());
-	printf("%s \n", _tokens[1].c_str());
-	printf("\n");
-	printf("\n");
-	V*/
+		boost::tokenizer<boost::char_separator<char> > tokenizer(std::string(std::begin(_buffer), std::end(_buffer)), sep);
+		std::vector<std::string> tokens(begin(tokenizer), end(tokenizer));
+
+		_readHandler(tokens);	
+
+		boost::asio::async_read(_socket, boost::asio::buffer(_buffer),
+			boost::asio::transfer_at_least(20),
+			boost::bind(&Irc::_read, this, boost::asio::placeholders::error)
+		);
+	}
+}
+
+void Irc::_readHandler(const std::vector<std::string> &tokens)
+{
+	for(auto func: _readHandlers) {
+		func(tokens);
+	}
+}
+
+
+void Irc::_sendHandler(const boost::system::error_code &error)
+{
+	if(error)
+		std::cerr << error.message() << std::endl;
 }

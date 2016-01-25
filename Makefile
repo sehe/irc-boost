@@ -3,7 +3,7 @@ CXX = g++
 EXE = pudding
 BUILD_DIR = build
 
-CXXFLAGS = -std=c++11 -Wall -Wextra -Wfatal-errors -pedantic -w -Winline -fno-rtti -ggdb -D_GLIBCXX_DEBUG -lboost_system -lboost_thread -lpthread
+CXXFLAGS = -std=c++11 -pthread -Wall -Wextra -lboost_system
 
 all: $(EXE)
 

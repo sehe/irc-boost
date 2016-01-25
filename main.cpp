@@ -18,14 +18,8 @@ int main()
 	irc.user(nick);
 	irc.nick(nick);	
 	irc.join(chan);
-	irc.privmsg(chan, "D-z est pas beau");	
-
-	std::vector<std::string> data;
 	
-	while(1)
-	{
-		irc.receive();	
-	}
+	irc.run();
 
 	return 0;
 }
