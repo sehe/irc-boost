@@ -10,11 +10,8 @@ Irc::Irc(const std::string &server, unsigned short port, bool verbose, bool auto
 	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios)
 {
 	_readHandlers.push_back([this](const std::vector<std::string> &t) {
-		std::cout << "ping handler " << t[0] << std::endl;
-		if(t[0].compare("PING") == 0)
-		{
-			std::cout << "Ping received, skipping it" << std::endl;
-		}	
+		for(std::size_t i = 0; i < t.size(); i++)
+			//std::cout << i << " " << t[i] << std::endl;
 	});
 
 	if(autoconnect)
@@ -116,6 +113,7 @@ void Irc::privmsg(const std::string &to, const std::string &msg)
 void Irc::command(const std::string &cmd, const std::string &msg)
 {
 	std::string message = cmd + " " + msg + "\r\n";
+	_send(message);
 }
 
 void Irc::command(const std::string &cmd, const std::string &to, const std::string &msg)
@@ -127,7 +125,12 @@ void Irc::command(const std::string &cmd, const std::string &to, const std::stri
 void Irc::run()
 {
 	_socket.async_read_some(boost::asio::buffer(_buffer), 
-		boost::bind(&Irc::_read, this, boost::asio::placeholders::error)
+		boost::bind(
+			&Irc::_read, 
+			this, 
+			boost::asio::placeholders::error,
+			boost::asio::placeholders::bytes_transferred
+		)
 	);
 	
 	_ios.run();
@@ -145,7 +148,7 @@ void Irc::_send(const std::string &msg)
 	);
 }
 
-void Irc::_read(const boost::system::error_code &error)
+void Irc::_read(const boost::system::error_code &error, std::size_t length)
 {
 	if(error)
 	{
@@ -153,19 +156,22 @@ void Irc::_read(const boost::system::error_code &error)
 	}
 	else
 	{
-		boost::char_separator<char> sep("!.@:; ");
-		
-		std::cout << "_read func\n";	
-		std::cout << _buffer.data() << std::endl;
+		std::cout << std::string(_buffer.data(), length) << std::endl;
 
-		boost::tokenizer<boost::char_separator<char> > tokenizer(std::string(std::begin(_buffer), std::end(_buffer)), sep);
+		boost::char_separator<char> sep("!.@:; ");
+		boost::tokenizer<boost::char_separator<char> > tokenizer(std::string(_buffer.data(), length), sep);
 		std::vector<std::string> tokens(begin(tokenizer), end(tokenizer));
 
 		_readHandler(tokens);	
 
 		boost::asio::async_read(_socket, boost::asio::buffer(_buffer),
 			boost::asio::transfer_at_least(20),
-			boost::bind(&Irc::_read, this, boost::asio::placeholders::error)
+			boost::bind(
+				&Irc::_read, 
+				this, 
+				boost::asio::placeholders::error,
+				boost::asio::placeholders::bytes_transferred
+			)
 		);
 	}
 }

@@ -29,7 +29,7 @@ class Irc
 
 	private:
 		void _send(const std::string &msg);
-		void _read(const boost::system::error_code &error);
+		void _read(const boost::system::error_code &error, std::size_t length);
 		void _readHandler(const std::vector<std::string> &tokens);
 		void _sendHandler(const boost::system::error_code &error);
 
