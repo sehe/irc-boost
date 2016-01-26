@@ -3,22 +3,19 @@
 
 #include <vector>
 #include <boost/asio.hpp>
-#include <boost/array.hpp>
-#include <boost/asio/buffer.hpp>
 #include <boost/tokenizer.hpp>
 
 class Irc
 {
 	public:
-		Irc(const std::string &server, unsigned short port, bool verbose, bool autoconnect = true);
-		~Irc();
+		Irc(const std::string &server, const std::string &port, const std::function<void()> onConnect);
 
-		bool connect();
-		bool disconnect();
+		void connect();
+		void close();
 
-		void nick(const std::string &nickname);
 		void user(const std::string &username);
 		void user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname);
+		void nick(std::string &nickname);
 		void join(const std::string &chan);
 		void part(const std::string &chan);
 		void privmsg(const std::string &to, const std::string &msg);
@@ -28,21 +25,21 @@ class Irc
 		void run();
 
 	private:
-		void _pong(const std::string &ping);
-		void _send(const std::string &msg);
-		void _read(const boost::system::error_code &error, std::size_t length);
-		void _readHandler(const std::string &command);
-		void _sendHandler(const boost::system::error_code &error);
+		void _read(const boost::system::error_code &error);
+		void _send(std::string &message);
+		void _readHandler(const boost::tokenizer<boost::char_separator<char> > &tokenizer);
+		void _connectHandler(const boost::system::error_code &error);
 
+		void _pong(const std::string &ping);
+		
 		std::string _server;
-		unsigned short _port;
-		bool _verbose;
-		std::string	_chan;
-		std::string	_nick;
-		std::array<char, 1024> _buffer;
+		std::string _port;
+		std::string _chan;
+		std::vector<std::function<void (const boost::tokenizer<boost::char_separator<char> >&)>> _readHandlers;
+		std::function<void()> _onConnect;
+		boost::asio::streambuf _buffer;
 		boost::asio::io_service _ios;
 		boost::asio::ip::tcp::socket _socket;
-		std::vector<std::function<void (const std::string&)>> _readHandlers;
 };
 
 #endif

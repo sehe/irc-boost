@@ -10,17 +10,20 @@
 int main()
 {
 	std::string server = "irc.mibbit.net";
-	unsigned short port = 6667;
+	std::string port = "6667";
 	std::string nick = "Bl4ckb0t";
-	std::string chan = "#Bl4cktest";	
+	std::string chan = "#CBNA";	
 
-	Irc irc(server, port, true, true);
+	Irc irc(server, port, [&irc, &nick, &chan](){
+		irc.user(nick);
+		irc.nick(nick);	
+		irc.join(chan);
+	});
 	
-	irc.user(nick);
-	irc.nick(nick);	
-	irc.join(chan);
-	
+
 	irc.run();
+
+	
 
 	return 0;
 }
