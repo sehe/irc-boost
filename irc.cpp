@@ -9,13 +9,19 @@
 Irc::Irc(const std::string &server, unsigned short port, bool verbose, bool autoconnect) :
 	_server(server), _port(port), _verbose(verbose), _ios(), _socket(_ios)
 {
-	_readHandlers.push_back([this](const std::vector<std::string> &t) {
-		for(std::size_t i = 0; i < t.size(); i++)
-			//std::cout << i << " " << t[i] << std::endl;
+	
+	_readHandlers.push_back([this](const std::string &s) {
+		if(s.substr(0, 4).compare("PING") == 0)
+		{	
+			std::string ping = s;
+			ping.replace(1, 1, "O");
+			_pong(ping);	
+		}
 	});
 
 	if(autoconnect)
 		connect();
+
 }
 
 Irc::~Irc()
@@ -97,6 +103,7 @@ void Irc::join(const std::string &chan)
 	(chan.front() == '#' ? _chan = chan : _chan = '#' + chan);
 
 	command("PART", _chan);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	command("JOIN", _chan);
 }
 
@@ -140,6 +147,11 @@ void Irc::run()
  *	Private
  */
 
+void Irc::_pong(const std::string &ping)
+{
+	_send(ping + "\r\n");
+}
+
 void Irc::_send(const std::string &msg)
 {
 	boost::asio::async_write(_socket, boost::asio::buffer(msg),
@@ -156,13 +168,9 @@ void Irc::_read(const boost::system::error_code &error, std::size_t length)
 	}
 	else
 	{
-		std::cout << std::string(_buffer.data(), length) << std::endl;
-
-		boost::char_separator<char> sep("!.@:; ");
-		boost::tokenizer<boost::char_separator<char> > tokenizer(std::string(_buffer.data(), length), sep);
-		std::vector<std::string> tokens(begin(tokenizer), end(tokenizer));
-
-		_readHandler(tokens);	
+		std::string data(_buffer.data(), length);
+		std::cout << data << std::endl;
+		_readHandler(data);	
 
 		boost::asio::async_read(_socket, boost::asio::buffer(_buffer),
 			boost::asio::transfer_at_least(20),
@@ -176,10 +184,10 @@ void Irc::_read(const boost::system::error_code &error, std::size_t length)
 	}
 }
 
-void Irc::_readHandler(const std::vector<std::string> &tokens)
+void Irc::_readHandler(const std::string &command)
 {
 	for(auto func: _readHandlers) {
-		func(tokens);
+		func(command);
 	}
 }
 

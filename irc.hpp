@@ -28,9 +28,10 @@ class Irc
 		void run();
 
 	private:
+		void _pong(const std::string &ping);
 		void _send(const std::string &msg);
 		void _read(const boost::system::error_code &error, std::size_t length);
-		void _readHandler(const std::vector<std::string> &tokens);
+		void _readHandler(const std::string &command);
 		void _sendHandler(const boost::system::error_code &error);
 
 		std::string _server;
@@ -41,7 +42,7 @@ class Irc
 		std::array<char, 1024> _buffer;
 		boost::asio::io_service _ios;
 		boost::asio::ip::tcp::socket _socket;
-		std::vector<std::function<void (const std::vector<std::string>&)>> _readHandlers;
+		std::vector<std::function<void (const std::string&)>> _readHandlers;
 };
 
 #endif

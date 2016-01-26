@@ -15,6 +15,7 @@ int main()
 	std::string chan = "#Bl4cktest";	
 
 	Irc irc(server, port, true, true);
+	
 	irc.user(nick);
 	irc.nick(nick);	
 	irc.join(chan);
