@@ -16,14 +16,6 @@ Irc::Irc(const std::string &server, const std::string &port, const std::function
 			_pong(tokens[1]);	
 	});
 
-	// 451 handler
-	_readHandlers.push_back([this](const boost::tokenizer<boost::char_separator<char> > &tokenizer) {
-		std::vector<std::string> tokens(begin(tokenizer), end(tokenizer));
-		
-		//for(auto &it : tokens)
-		//	if (it.compare("451") == 0) join(_chan);
-
-	});
 }
 
 void Irc::connect()
@@ -112,7 +104,7 @@ void Irc::command(const std::string &cmd, const std::string &to, const std::stri
 void Irc::run()
 {
 	boost::asio::async_read_until(_socket, _buffer, "\r\n",
-		boost::bind(&Irc::_readHandler, this,
+		boost::bind(&Irc::_read, this,
 			boost::asio::placeholders::error
 		)
 	);
@@ -141,7 +133,7 @@ void Irc::_read(const boost::system::error_code &error)
 
 		_readHandler(tokenizer);
 		boost::asio::async_read_until(_socket, _buffer, "\r\n",
-			boost::bind(&Irc::_readHandler, this,
+			boost::bind(&Irc::_read, this,
 				boost::asio::placeholders::error
 			)
 		);
