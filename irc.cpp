@@ -98,11 +98,7 @@ void Irc::command(const std::string &cmd, const std::string &to, const std::stri
 void Irc::run()
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-    boost::asio::async_read_until(_socket, _buffer, "\r\n",
-        boost::bind(&Irc::_read, this,
-            boost::asio::placeholders::error
-        )
-    );
+    connect();
 
     _ios.run();
 }
@@ -155,6 +151,13 @@ void Irc::_connectHandler(const boost::system::error_code &error)
     if(!error)
     {
         _onConnected();
+
+        std::cout << "onConnect completed, starting read\n";
+        boost::asio::async_read_until(_socket, _buffer, "\r\n",
+                boost::bind(&Irc::_read, this,
+                    boost::asio::placeholders::error
+                    )
+                );
     } else
     {
         std::cout << "Error connecting to " << _server << " " << error.message() << std::endl;
