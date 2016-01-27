@@ -116,7 +116,8 @@ void Irc::_read(const boost::system::error_code &error)
     }
     else
     {
-        std::string data(buffers_begin(_buffer.data()), buffers_begin(_buffer.data()) + _buffer.size());
+        auto buflist = _buffer.data();
+        std::string data(buffers_begin(buflist), buffers_end(buflist));
         std::cout << data << std::endl;     
 
         boost::char_separator<char> sep("!@:; ");
