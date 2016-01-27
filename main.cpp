@@ -15,14 +15,11 @@ int main()
 	std::string chan = "#CBNA";	
 
 	Irc irc(server, port, [&irc, &nick, &chan](){
-		irc.user(nick);
+		irc.user(nick); // all of this is synchronous... which is convenient for now
 		irc.nick(nick);	
 		irc.join(chan);
 	});
 	
-
 	irc.run();
-
-	return 0;
 }
 
