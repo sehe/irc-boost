@@ -17,8 +17,8 @@ class Irc
         void user(const std::string &username);
         void user(const std::string &username, const std::string &hostname, const std::string &server, const std::string &realname);
         void nick(std::string &nickname);
-        void join(const std::string &chan);
-        void part(const std::string &chan);
+        void join(std::string chan);
+        void part(std::string chan);
         void privmsg(const std::string &to, const std::string &msg);
         void command(const std::string &cmd, const std::string &msg);
         void command(const std::string &cmd, const std::string &to, const std::string &msg);

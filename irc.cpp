@@ -56,17 +56,22 @@ void Irc::nick(std::string &nickname)
 	command("NICK", nickname);
 }
 
-void Irc::join(const std::string &chan)
+void Irc::join(std::string chan)
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-	(chan.front() == '#' ? _chan = chan : _chan = '#' + chan);
 	part(_chan);
-	command("JOIN", _chan);
+    if (chan.front() != '#')
+        chan.insert(chan.begin(), '#');
+	command("JOIN", chan);
+
+    _chan = chan;
 }
 
-void Irc::part(const std::string &chan)
+void Irc::part(std::string chan)
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
+    if (chan.front() != '#')
+        chan.insert(chan.begin(), '#');
 	command("PART", chan);
 }
 
