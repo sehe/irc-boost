@@ -124,6 +124,8 @@ void Irc::_read(const boost::system::error_code &error)
         boost::tokenizer<boost::char_separator<char> > tokenizer(data, sep);
 
         _readHandler(tokenizer);
+
+        _buffer.consume(_buffer.size());
         boost::asio::async_read_until(_socket, _buffer, "\r\n",
             boost::bind(&Irc::_read, this,
                 boost::asio::placeholders::error
