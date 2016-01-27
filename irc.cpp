@@ -21,35 +21,14 @@ Irc::Irc(const std::string &server, const std::string &port, const std::function
 void Irc::connect()
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-    boost::asio::ip::tcp::resolver resolver(_ios);
-    boost::asio::ip::tcp::resolver::query query(_server, _port);
-    boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
-    boost::asio::ip::tcp::resolver::iterator end;
-    boost::system::error_code error = boost::asio::error::host_not_found;
+    using boost::asio::ip::tcp;
+    tcp::resolver resolver(_ios);
+    tcp::resolver::query query(_server, _port);
+    tcp::resolver::iterator it = resolver.resolve(query), end;
 
-    while(it != end)
-    {
-        if(!error)
-            break;
+    std::cout << "Connecting to " << _server << " " << _port << std::endl;
 
-        std::cout << "Connecting to " << _server << " " << _port << std::endl;
-
-        boost::asio::async_connect(_socket, it,
-            boost::bind(&Irc::_connectHandler, this, error)
-        );
-
-        it++;
-
-        if(error)
-            std::cout << "Error : " << error.message() << std::endl;
-
-    }
-
-    if(error)
-        std::cout << "Error connectinf to " << _server << " " << error.message() << std::endl;
-    else
-        std::cout << "Connection success" << std::endl;
-
+    boost::asio::async_connect(_socket, it, boost::bind(&Irc::_connectHandler, this, boost::asio::placeholders::error()));
 }
 
 void Irc::close()
@@ -171,6 +150,9 @@ void Irc::_connectHandler(const boost::system::error_code &error)
     if(!error)
     {
         _onConnected();
+    } else
+    {
+        std::cout << "Error connecting to " << _server << " " << error.message() << std::endl;
     }
 }
 
