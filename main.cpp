@@ -11,7 +11,7 @@ int main()
 {
 	std::string server = "irc.mibbit.net";
 	std::string port = "6667";
-	std::string nick = "Bl4ckb0t";
+	std::string nick = "so-sehe";
 	std::string chan = "#CBNA";	
 
 	Irc irc(server, port, [&irc, &nick, &chan](){
@@ -22,8 +22,6 @@ int main()
 	
 
 	irc.run();
-
-	
 
 	return 0;
 }
