@@ -4,8 +4,8 @@
 #include <boost/make_shared.hpp>
 
 Irc::Irc(const std::string &server, const std::string &port, const std::function<void()> onConnect)
-    : _server(server), _port(port), _onConnect(onConnect), 
-      _socket(boost::make_shared<boost::asio::ip::tcp::socket>(boost::ref(_ios)))
+    : _server(server), _port(port), _onConnected(onConnect), 
+      _socket(_ios)
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
     // Ping back handler
@@ -34,7 +34,7 @@ void Irc::connect()
 
         std::cout << "Connecting to " << _server << " " << _port << std::endl;
 
-        boost::asio::async_connect(*_socket, it,
+        boost::asio::async_connect(_socket, it,
             boost::bind(&Irc::_connectHandler, this, error)
         );
 
@@ -55,7 +55,7 @@ void Irc::connect()
 void Irc::close()
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-    _socket->close();
+    _socket.close();
     _ios.stop();
 }
 
@@ -114,7 +114,7 @@ void Irc::command(const std::string &cmd, const std::string &to, const std::stri
 void Irc::run()
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-    boost::asio::async_read_until(*_socket, _buffer, "\r\n",
+    boost::asio::async_read_until(_socket, _buffer, "\r\n",
         boost::bind(&Irc::_read, this,
             boost::asio::placeholders::error
         )
@@ -143,7 +143,7 @@ void Irc::_read(const boost::system::error_code &error)
         boost::tokenizer<boost::char_separator<char> > tokenizer(data, sep);
 
         _readHandler(tokenizer);
-        boost::asio::async_read_until(*_socket, _buffer, "\r\n",
+        boost::asio::async_read_until(_socket, _buffer, "\r\n",
             boost::bind(&Irc::_read, this,
                 boost::asio::placeholders::error
             )
@@ -155,7 +155,7 @@ void Irc::_read(const boost::system::error_code &error)
 inline void Irc::_send(std::string &message)
 {
     std::cout << __PRETTY_FUNCTION__ << "\n";
-    boost::asio::write(*_socket, boost::asio::buffer(message + "\r\n"));
+    boost::asio::write(_socket, boost::asio::buffer(message + "\r\n"));
 }
 
 void Irc::_readHandler(const boost::tokenizer<boost::char_separator<char> > &tokenizer)
@@ -170,7 +170,7 @@ void Irc::_connectHandler(const boost::system::error_code &error)
     std::cout << __PRETTY_FUNCTION__ << "\n";
     if(!error)
     {
-        _onConnect();
+        _onConnected();
     }
 }
 

@@ -37,10 +37,10 @@ class Irc
         std::string _port;
         std::string _chan;
         std::vector<std::function<void (const boost::tokenizer<boost::char_separator<char> >&)>> _readHandlers;
-        std::function<void()> _onConnect;
+        std::function<void()> _onConnected;
         boost::asio::streambuf _buffer;
         boost::asio::io_service _ios;
-        boost::shared_ptr<boost::asio::ip::tcp::socket> _socket;
+        boost::asio::ip::tcp::socket _socket;
 };
 
 #endif
